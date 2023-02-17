@@ -1,0 +1,37 @@
+FROM alpine:3.15
+
+# Install required packages
+RUN apk add --update --no-cache bash gcc musl-dev linux-headers dos2unix
+
+# Install python/pip
+RUN apk add --update --no-cache python3
+RUN python3 -m ensurepip --upgrade
+#ENV PYTHONUNBUFFERED=1
+# install any Python requirements used by the jobs
+COPY ./requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+WORKDIR /usr/scheduler
+
+# Copy files
+COPY ./bot/db ./db
+COPY ./bot/worker1.py ./worker1.py
+COPY scheduler/* ./
+
+# Fix line endings && execute permissions
+#RUN start.sh crontab.Development
+RUN find . -type f -exec chmod 755 {} +
+#RUN find . -type d -print {};
+    #  && \
+    # crontab crontab.Development
+# RUN dos2unix crontab.* *.sh *.py \
+#     && \
+#     find . -type f -iname "*.sh" -exec chmod +x {} \
+#     && \
+#     find . -type f -iname "*.py" -exec chmod +x {} \;
+
+# create cron.log file
+RUN touch /var/log/cron.log
+
+# Run cron on container startup
+CMD ["./start.sh"]

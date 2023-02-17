@@ -1,0 +1,9 @@
+FROM python:3.9-alpine
+WORKDIR ./bot
+RUN apk add --no-cache bash gcc musl-dev linux-headers
+COPY ./bot/db ./db
+COPY ./bot/reminder_bot.py ./reminder_bot.py
+COPY requirements.txt requirements.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install -r requirements.txt
+CMD ["python3", "reminder_bot.py" ]

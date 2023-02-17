@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  bot:
+    image: bot:0.3
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: bot_docker1
+    environment:
+      db_user_password: /run/secrets/db_user_password
+      db_user_login: /run/secrets/db_user_login
+      db_name: /run/secrets/db_name
+      db_host: /run/secrets/db_host
+      bot_token: /run/secrets/bot_token
+    secrets:
+      - db_user_password
+      - db_user_login
+      - db_name
+      - db_host
+      - bot_token
+  worker:
+    image: worker:0.3
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: scheduler_docker
+    environment:
+      db_worker_password: /run/secrets/db_worker_password
+      db_worker_login: /run/secrets/db_worker_login
+      db_name: /run/secrets/db_name
+      db_host: /run/secrets/db_host
+      bot_token: /run/secrets/bot_token
+    secrets:
+      - db_worker_password
+      - db_worker_login
+      - db_name
+      - db_host
+      - bot_token
+secrets:
+  bot_token:
+    file: ./secrets/bot_token.txt
+  db_user_password:
+    file: ./secrets/db_user_password.txt
+  db_user_login:
+    file: ./secrets/db_user_login.txt
+  db_worker_password:
+    file: ./secrets/db_worker_password.txt
+  db_worker_login:
+    file: ./secrets/db_worker_login.txt
+  db_name:
+    file: ./secrets/db_name.txt
+  db_host:
+    file: ./secrets/db_host.txt

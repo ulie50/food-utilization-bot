@@ -1,0 +1,26 @@
+﻿name: Bot test
+run-name: test for never4getti bot dockers
+
+on: [push]
+
+jobs:
+
+  build_bot:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image for bot
+      run: docker build . --file bot_docker1 --tag my-image-name:$(date +%s)
+
+  build_worker:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image for bot
+      run: docker build . --file scheduler_docker --tag my-image-name:$(date +%s)
+
+

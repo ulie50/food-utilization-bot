@@ -1,0 +1,5 @@
+SQLAlchemy==1.4.44
+telegram==0.0.1
+python-telegram-bot==13.14
+requests==2.22.0
+pymysql
