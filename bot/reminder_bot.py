@@ -1,17 +1,19 @@
 #!/usr/bin/env python
-
+#Idee: add calculation of similar word to make a suggestion
 import os
 import logging
 import requests
-from db.dbHelper import dbHelper
+from bot.db.dbHelper import dbHelper
 
-from telegram import Update, ForceReply
+import telegram
+from telegram import Update
 from telegram.ext import (
     Updater,
     CommandHandler,
     MessageHandler,
     Filters,
     CallbackContext,
+    CallbackQueryHandler
 )
 PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -25,10 +27,55 @@ logger = logging.getLogger(__name__)
 def start(update: Update, _: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
+
     update.message.reply_markdown_v2(
-        f"Hi {user.mention_markdown_v2()}!",
-        reply_markup=ForceReply(selective=True),
+        f"Hi {str(user.mention_markdown_v2())}\!",
+        #reply_markup=button,
+        reply_markup={
+            "inline_keyboard": [
+                [
+                {
+                    "text": "🇬🇧 english",
+                    "callback_data": "en"
+                },
+                {
+                    "text": "🇩🇪 deutsch",
+                    "callback_data": "de"
+                },
+                {
+                    "text": "русский",
+                    "callback_data": "ru"
+                }
+                ]
+            ]
+            }
+ 
     )
+
+
+def command_handler_help(update: Update, _: CallbackContext,language=None):
+    db = dbHelper("user")
+
+    if language:
+        if update.message:
+            update.message.reply_text(db.get_phrase(phrase_id=1,language=language).phrase)
+            
+        elif update.callback_query.message:
+            update.callback_query.message.reply_text(db.get_phrase(phrase_id=1,language=language).phrase)
+
+    else:
+        language = db.get_user_language(chat_id=update.effective_message.chat_id)
+        if language:
+            command_handler_help(update,_,language)
+        else:
+            update.message.reply_text("Please select language from start menu")
+
+
+def callback_query_handler(update:Update, _: CallbackContext):
+    callback_data = update.callback_query.data
+    db = dbHelper("user")
+    db.add_chat(chat=update.effective_message.chat_id,language=callback_data)
+    command_handler_help( update,_,callback_data)
 
 
 def help_command(update: Update, _: CallbackContext) -> None:
@@ -68,21 +115,30 @@ def writeInDB(update: Update, _: CallbackContext) -> None:
     chat_id = update.effective_message.chat_id
     db = dbHelper("user")
 
-    product = db.is_item_in_db(msg_text.lower())
-    if product:
-        logger.info(f"{msg_text}is in DB")
-        days = db.getDays(product[1])
-        db.add2notification(chat=str(chat_id), message=msg_text, days=days)
-        db.add2entrance(chat=str(chat_id), message=msg_text, inDB=True)
-        update.message.reply_text("Ok, got it!")
-        logger.info(f"set schedule for {msg_text}")
+    language = db.get_user_language(chat_id=update.effective_message.chat_id)
+    if language:
+        product_info = db.is_item_in_db(msg_text.lower(),language)
+        if product_info:
+            *info,product_id = product_info
+            if product_id:
+                logger.info(f"{msg_text}is in DB")
+                id,days,*rest = db.getDays(product_id)
+                notification_id = db.add_notification(chat=str(chat_id), message=msg_text, days=days)
+                db.add_entrance(chat=str(chat_id), message=msg_text, inDB=True,notification_id = notification_id)
+                reply_text = db.get_phrase(2,language=language)
+                update.message.reply_text(reply_text.phrase)
+                logger.info(f"set schedule for {msg_text}")
 
+        else:
+            logger.info(f"{msg_text}is not DB")
+
+            db.add_entrance(chat=str(chat_id), message=msg_text,inDB=False)
+            reply_text = db.get_phrase(3,language=language)
+            update.message.reply_text(reply_text.phrase)
+            logger.info(f"{msg_text} doesnt exist in DB")
     else:
-        logger.info(f"{msg_text}is not DB")
+        update.message.reply_text("Please select language from start menu")
 
-        db.add2entrance(chat=str(chat_id), message=msg_text, inDB=False)
-        update.message.reply_text("Uh, sorry we do not have info about this product")
-        logger.info(f"{msg_text} doesnt exist in DB")
 
 def get_secret(key, default):
     value = os.getenv(key, default)
@@ -103,11 +159,12 @@ def main() -> None:
     dispatcher = updater.dispatcher
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("help", command_handler_help))
 
     # on non command i.e message - echo the message on Telegram
     # dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, writeInDB))
+    dispatcher.add_handler(CallbackQueryHandler(callback_query_handler))
 
     # Start the Bot
     updater.start_polling()

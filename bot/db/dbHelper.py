@@ -8,12 +8,16 @@ import datetime
 import sqlalchemy
 from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker
-from db.tables import (
+from bot.db.tables import (
     Base,
-    Entrance_new,
-    Notification_new,
-    Product_names,
-    Storage_info,
+    Entrances,
+    Notifications,
+    Products,
+    Products_en,
+    Products_de,
+    Products_ru,
+    Chats,
+    Phrases
 )
 PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -33,14 +37,51 @@ class dbHelper:
         self.metadata = sqlalchemy.MetaData(schema="basic")
         self.Session = sessionmaker(bind=self.engine)
 
-    def add2entrance(self, chat, message, inDB=False):
+        with self.engine.begin() as conn:
+            Base.metadata.create_all(conn)
+
+    def add_chat(self, chat, language):
         db_ind = uuid.uuid4().hex
         with self.Session() as session:
             session.add(
-                Entrance_new(
-                    entrance_id=db_ind,
+                Chats(
+                    id = db_ind,
+                    chat_id = chat,
+                    language = language,
+                    entrance_timestamp=datetime.date.today(),
+                )
+            )
+            session.commit()
+
+    def get_chat(self,chat_id):
+        with self.Session() as session:
+            chat_info =  session.query(Chats).filter(Chats.chat_id==chat_id).order_by(
+                                        sqlalchemy.desc(Chats.entrance_timestamp)).limit(1).one()
+            return chat_info
+        
+
+    def get_user_language(self,chat_id):
+        chat_info = self.get_chat(chat_id)
+        if chat_info:
+            return chat_info.language
+        else:
+            return None
+
+
+    def get_phrase(self,phrase_id,language):
+        with self.Session() as session:
+            return session.query(Phrases).filter(sqlalchemy.and_(Phrases.id==phrase_id,Phrases.language==language)).one()
+
+
+    def add_entrance(self, chat, message,notification_id=None, inDB=False):
+        db_ind = uuid.uuid4().hex
+        with self.Session() as session:
+            session.add(
+                Entrances(
+                    id=db_ind,
                     chat_id=chat,
-                    product=message,
+                    notification_id = notification_id,
+                    input_text=message,
                     in_storage=inDB,
                     entrance_timestamp=datetime.datetime.now(),
                 )
@@ -54,24 +95,25 @@ class dbHelper:
                 return f.read()
         return value
 
-    def getDays(self, product):
+    def getDays(self, product_id):
         with self.engine.connect() as conn:
             result = conn.execute(
-                Storage_info.__table__.select().where(
-                    Storage_info.__table__.c.product_name == str(product)
+                Products.__table__.select().where(
+                    Products.__table__.c.id == str(product_id)
                 )
             )
 
-        return result.fetchone()[1]
+        return result.fetchone()
 
-    def add2notification(self, chat, message, days):
+
+    def add_notification(self, chat, message, days):
         db_ind = uuid.uuid4().hex
         date = datetime.datetime.now() + datetime.timedelta(days=days)
 
         with self.Session() as session:
             session.add(
-                Notification_new(
-                    notification_id=db_ind,
+                Notifications(
+                    id=db_ind,
                     chat_id=chat,
                     notification_date=date,
                     user_product=message,
@@ -80,12 +122,19 @@ class dbHelper:
                 )
             )
             session.commit()
+        return db_ind
 
-    def is_item_in_db(self, message):
+    def is_item_in_db(self, message,language):
+        if language=='en':
+            table = Products_en.__table__
+        elif language == 'de':
+            table = Products_de.__table__
+        elif language == 'ru':
+            table = Products_ru.__table__
         with self.engine.connect() as conn:
             result = conn.execute(
-                Product_names.__table__.select().where(
-                    Product_names.__table__.c.name_var == str(message)
+                table.select().where(
+                    table.c.product_name == str(message)
                 )
             )
 
