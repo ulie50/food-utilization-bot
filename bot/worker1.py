@@ -15,16 +15,16 @@ logger = logging.getLogger(__name__)
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 
-def send_message(token, chat_id, product):
+def send_message(token,db, chat_id, product):
     
-    bot_token = token
-    bot_chatID = chat_id
-    bot_message = f"Please utilize {product} before tomorrow"
+    language = db.get_user_language(chat_id)
+    phrase = db.get_phrase(4,language)
+    bot_message = phrase.format(product=product)
     send_text = (
         "https://api.telegram.org/bot"
-        + bot_token
+        + token
         + "/sendMessage?chat_id="
-        + bot_chatID
+        + chat_id
         + "&parse_mode=Markdown&text="
         + bot_message
     )
@@ -54,11 +54,11 @@ def main():
     db = dbHelper("worker")
     result = db.check_notification(current_date)
     if result:
-        for nid, chat, is_notified, notif_date, is_freez, link, product in result:
+        for nid, chat, is_notified, *info, product in result:
             if is_notified:
                 logger.info("user was alredy notified")
             else:
-                send_message(TOKEN, chat, product)
+                send_message(TOKEN,db, chat, product)
                 db.update_is_notified(nid)
                 logger.info("Notification sent")
     else:

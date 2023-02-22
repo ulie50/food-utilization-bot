@@ -143,9 +143,9 @@ class dbHelper:
     def check_notification(self, date:datetime.datetime):
         with self.engine.connect() as conn:
             result = conn.execute(
-                Notification_new.__table__.select().where(sqlalchemy.and_(
-                    func.date(Notification_new.__table__.c.notification_date) == date.date(),
-                    func.extract('hour',Notification_new.__table__.c.notification_date) == date.hour
+                Notifications.__table__.select().where(sqlalchemy.and_(
+                    func.date(Notifications.__table__.c.notification_date) == date.date(),
+                    func.extract('hour',Notifications.__table__.c.notification_date) == date.hour
                 )  
                 )
             )
@@ -156,8 +156,8 @@ class dbHelper:
         with self.engine.connect() as conn:
             with conn.begin() as trans:
                 conn.execute(
-                    Notification_new.__table__.update()
-                    .where(Notification_new.__table__.c.notification_id == nid)
+                    Notifications.__table__.update()
+                    .where(Notifications.__table__.c.notification_id == nid)
                     .values(is_notified=True)
                 )
                 trans.commit()
