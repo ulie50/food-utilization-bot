@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """This class should be used to execute sql queries"""
 from calendar import c
 import os
@@ -8,7 +10,7 @@ import datetime
 import sqlalchemy
 from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker
-from bot.db.tables import (
+from db.tables import (
     Base,
     Entrances,
     Notifications,
@@ -116,7 +118,7 @@ class dbHelper:
                     id=db_ind,
                     chat_id=chat,
                     notification_date=date,
-                    user_product=message,
+                    user_input_text=message,
                     # is_freezable=False,
                     # link="test",
                 )

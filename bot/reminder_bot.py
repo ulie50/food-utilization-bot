@@ -3,7 +3,7 @@
 import os
 import logging
 import requests
-from bot.db.dbHelper import dbHelper
+from db.dbHelper import dbHelper
 
 import telegram
 from telegram import Update
