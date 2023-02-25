@@ -159,7 +159,7 @@ class dbHelper:
             with conn.begin() as trans:
                 conn.execute(
                     Notifications.__table__.update()
-                    .where(Notifications.__table__.c.notification_id == nid)
+                    .where(Notifications.__table__.c.id == nid)
                     .values(is_notified=True)
                 )
                 trans.commit()

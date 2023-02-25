@@ -18,8 +18,8 @@ PATH = os.path.dirname(os.path.abspath(__file__))
 def send_message(token,db, chat_id, product):
     
     language = db.get_user_language(chat_id)
-    phrase = db.get_phrase(4,language)
-    bot_message = phrase[0].format(product=product)
+    phrase = db.get_phrase(4,language).phrase
+    bot_message = phrase.format(product=product)
     send_text = (
         "https://api.telegram.org/bot"
         + token
